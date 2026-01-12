@@ -160,4 +160,46 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+
+  /* Safe area for mobile devices */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Stat Cards - ClinicStock style */
+  .stat-card-neutral {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+  }
+
+  .stat-card-warning {
+    background: hsl(45 100% 8%);
+    border: 1px solid hsl(45 80% 20%);
+  }
+
+  .stat-card-danger {
+    background: hsl(0 60% 10%);
+    border: 1px solid hsl(0 50% 20%);
+  }
+
+  .stat-card-success {
+    background: hsl(140 50% 8%);
+    border: 1px solid hsl(140 40% 18%);
+  }
+
+  /* Light mode variants */
+  :root:not(.dark) .stat-card-warning {
+    background: hsl(45 100% 96%);
+    border: 1px solid hsl(45 80% 80%);
+  }
+
+  :root:not(.dark) .stat-card-danger {
+    background: hsl(0 60% 97%);
+    border: 1px solid hsl(0 50% 85%);
+  }
+
+  :root:not(.dark) .stat-card-success {
+    background: hsl(140 50% 96%);
+    border: 1px solid hsl(140 40% 80%);
+  }
 }
