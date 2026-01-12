@@ -3,14 +3,13 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-// Firebase configuration - Replace with your own Firebase project config
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "YOUR_API_KEY",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "YOUR_PROJECT.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "YOUR_PROJECT_ID",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "YOUR_PROJECT.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "YOUR_SENDER_ID",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "YOUR_APP_ID"
+  apiKey: "AIzaSyBXe2SGG0k1h0Ij4cHu0WCa2iRFLAGCLXs",
+  authDomain: "clinicflow-b4c0e.firebaseapp.com",
+  projectId: "clinicflow-b4c0e",
+  storageBucket: "clinicflow-b4c0e.firebasestorage.app",
+  messagingSenderId: "12433985112",
+  appId: "1:12433985112:web:a2ba3cd6f7ee8a3572c42d"
 };
 
 // Initialize Firebase only if it hasn't been initialized
