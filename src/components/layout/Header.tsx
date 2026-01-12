@@ -1,4 +1,5 @@
-import { Sparkles, Sun, Moon, LogOut } from "lucide-react";
+import { Sun, Moon, LogOut } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -34,7 +35,7 @@ export function Header() {
       <div className="flex items-center justify-between h-full px-4">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <Sparkles className="h-6 w-6 text-primary" />
+          <img src={logo} alt="ClinicFlow" className="h-8 w-8" />
           <span className="font-display font-semibold text-lg text-foreground">
             ClinicFlow
           </span>
