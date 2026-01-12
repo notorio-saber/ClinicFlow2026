@@ -13,6 +13,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import PurchaseScreen from "./pages/PurchaseScreen";
 import Dashboard from "./pages/Dashboard";
 import Patients from "./pages/Patients";
+import PatientDetail from "./pages/PatientDetail";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -72,6 +73,7 @@ const AppRoutes = () => (
     <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
       <Route path="/" element={<Dashboard />} />
       <Route path="/patients" element={<Patients />} />
+      <Route path="/patients/:patientId" element={<PatientDetail />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/admin" element={<Admin />} />
     </Route>
