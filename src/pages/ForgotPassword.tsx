@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Mail, ArrowLeft, Sparkles, CheckCircle } from 'lucide-react';
+import { Loader2, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -60,9 +61,7 @@ export default function ForgotPassword() {
       <div className="w-full max-w-md animate-slide-up">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary mb-4">
-            <Sparkles className="w-8 h-8 text-white" />
-          </div>
+          <img src={logo} alt="ClinicFlow" className="w-20 h-20 mx-auto mb-4" />
           <h1 className="text-3xl font-display font-bold text-foreground">ClinicFlow</h1>
         </div>
 
