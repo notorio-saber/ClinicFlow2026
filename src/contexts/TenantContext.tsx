@@ -189,7 +189,12 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateTenantSettings = async (settings: Partial<Tenant>) => {
-    if (!tenant || !canManageMembers) {
+    if (!tenant) {
+      throw new Error('Nenhuma clínica configurada');
+    }
+
+    // Permite que owner ou staff atualizem configurações
+    if (!canEdit) {
       throw new Error('Sem permissão para alterar configurações');
     }
 

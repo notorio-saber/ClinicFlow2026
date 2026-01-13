@@ -8,10 +8,10 @@ import {
   MessageCircle, 
   RefreshCw, 
   LogOut, 
-  Sparkles,
   Clock,
   Shield
 } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 export default function PurchaseScreen() {
   const [isReloading, setIsReloading] = useState(false);
@@ -34,9 +34,7 @@ export default function PurchaseScreen() {
       <div className="w-full max-w-lg animate-slide-up">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary mb-4">
-            <Sparkles className="w-8 h-8 text-white" />
-          </div>
+          <img src={logo} alt="ClinicFlow" className="w-20 h-20 mx-auto mb-4" />
           <h1 className="text-3xl font-display font-bold text-foreground">ClinicFlow</h1>
         </div>
 

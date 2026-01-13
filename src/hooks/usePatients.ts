@@ -11,19 +11,19 @@ import {
   doc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Patient, PatientFormData } from '@/types';
 
 export function usePatients() {
-  const { tenant, canEdit } = useTenant();
   const { user } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const tenantId = user?.tenantId;
+
   useEffect(() => {
-    if (!tenant?.id) {
+    if (!tenantId) {
       setPatients([]);
       setLoading(false);
       return;
@@ -31,7 +31,7 @@ export function usePatients() {
 
     const q = query(
       collection(db, 'patients'),
-      where('tenantId', '==', tenant.id),
+      where('tenantId', '==', tenantId),
       orderBy('createdAt', 'desc')
     );
 
@@ -53,16 +53,16 @@ export function usePatients() {
     );
 
     return () => unsubscribe();
-  }, [tenant?.id]);
+  }, [tenantId]);
 
   const addPatient = useCallback(
     async (data: PatientFormData) => {
-      if (!tenant?.id || !user?.uid || !canEdit) {
+      if (!tenantId || !user?.uid) {
         throw new Error('Sem permissão para adicionar pacientes');
       }
 
       const patientData: Omit<Patient, 'id'> = {
-        tenantId: tenant.id,
+        tenantId: tenantId,
         name: data.name,
         email: data.email,
         phone: data.phone,
@@ -77,12 +77,12 @@ export function usePatients() {
       const docRef = await addDoc(collection(db, 'patients'), patientData);
       return docRef.id;
     },
-    [tenant?.id, user?.uid, canEdit]
+    [tenantId, user?.uid]
   );
 
   const updatePatient = useCallback(
     async (patientId: string, data: Partial<PatientFormData>) => {
-      if (!canEdit) {
+      if (!tenantId) {
         throw new Error('Sem permissão para editar pacientes');
       }
 
@@ -91,18 +91,18 @@ export function usePatients() {
         updatedAt: new Date().toISOString(),
       });
     },
-    [canEdit]
+    [tenantId]
   );
 
   const deletePatient = useCallback(
     async (patientId: string) => {
-      if (!canEdit) {
+      if (!tenantId) {
         throw new Error('Sem permissão para excluir pacientes');
       }
 
       await deleteDoc(doc(db, 'patients', patientId));
     },
-    [canEdit]
+    [tenantId]
   );
 
   const searchPatients = useCallback(
