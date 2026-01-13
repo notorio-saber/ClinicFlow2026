@@ -1,43 +1,27 @@
 import { Users, Calendar, AlertCircle, Activity, ChevronRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePatients } from "@/hooks/usePatients";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { RecentPatientCard } from "@/components/dashboard/RecentPatientCard";
 import { FloatingActionButton } from "@/components/layout/FloatingActionButton";
 import { Button } from "@/components/ui/button";
-
-// Dados mock para demonstração
-const mockPatients = [
-  {
-    id: "1",
-    name: "Maria Silva Santos",
-    lastProcedure: "Botox - Região frontal",
-    lastVisitDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 dias atrás
-  },
-  {
-    id: "2",
-    name: "João Carlos Oliveira",
-    lastProcedure: "Preenchimento labial",
-    lastVisitDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5), // 5 dias atrás
-  },
-  {
-    id: "3",
-    name: "Ana Paula Ferreira",
-    lastProcedure: "Harmonização facial",
-    lastVisitDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12), // 12 dias atrás
-  },
-  {
-    id: "4",
-    name: "Carlos Eduardo Lima",
-    lastProcedure: "Bioestimulador",
-    lastVisitDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30), // 30 dias atrás
-  },
-];
+import { Loader2 } from "lucide-react";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { patients, loading } = usePatients();
+  const navigate = useNavigate();
 
   const firstName = user?.displayName?.split(" ")[0] || "Usuário";
+
+  // Últimos 4 pacientes
+  const recentPatients = patients.slice(0, 4).map(patient => ({
+    id: patient.id,
+    name: patient.name,
+    lastProcedure: patient.notes || "Sem procedimentos",
+    lastVisitDate: new Date(patient.updatedAt || patient.createdAt),
+  }));
 
   return (
     <div className="space-y-6">
@@ -55,28 +39,28 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-3">
         <StatCard
           title="Pacientes"
-          value={128}
+          value={patients.length}
           subtitle="Total cadastrados"
           icon={Users}
           variant="neutral"
         />
         <StatCard
           title="Agenda Hoje"
-          value={5}
+          value={0}
           subtitle="Procedimentos"
           icon={Calendar}
           variant="warning"
         />
         <StatCard
           title="Pendências"
-          value={3}
+          value={0}
           subtitle="Retornos atrasados"
           icon={AlertCircle}
           variant="danger"
         />
         <StatCard
           title="Procedimentos"
-          value={47}
+          value={0}
           subtitle="Este mês"
           icon={Activity}
           variant="success"
@@ -97,21 +81,39 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        <div className="space-y-2">
-          {mockPatients.map((patient) => (
-            <RecentPatientCard
-              key={patient.id}
-              name={patient.name}
-              lastProcedure={patient.lastProcedure}
-              lastVisitDate={patient.lastVisitDate}
-              onClick={() => console.log("Navigate to patient", patient.id)}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : recentPatients.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Nenhum paciente cadastrado</p>
+            <Button 
+              variant="link" 
+              className="mt-2"
+              onClick={() => navigate("/patients")}
+            >
+              Cadastrar primeiro paciente
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {recentPatients.map((patient) => (
+              <RecentPatientCard
+                key={patient.id}
+                name={patient.name}
+                lastProcedure={patient.lastProcedure}
+                lastVisitDate={patient.lastVisitDate}
+                onClick={() => navigate(`/patients/${patient.id}`)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* FAB */}
-      <FloatingActionButton to="/patients/new" />
+      <FloatingActionButton onClick={() => navigate("/patients")} />
     </div>
   );
 }

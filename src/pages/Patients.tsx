@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FloatingActionButton } from "@/components/layout/FloatingActionButton";
 import { PatientCard } from "@/components/patients/PatientCard";
 import { PatientFormDialog } from "@/components/patients/PatientFormDialog";
+import { PatientDetailDialog } from "@/components/patients/PatientDetailDialog";
 import { usePatients } from "@/hooks/usePatients";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
@@ -29,6 +30,7 @@ export default function Patients() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [deletePatientId, setDeletePatientId] = useState<string | null>(null);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
   const filteredPatients = searchPatients(searchTerm);
 
@@ -109,7 +111,7 @@ export default function Patients() {
             <PatientCard
               key={patient.id}
               patient={patient}
-              onClick={() => navigate(`/patients/${patient.id}`)}
+              onClick={() => setSelectedPatient(patient)}
               onEdit={() => { setEditingPatient(patient); setDialogOpen(true); }}
               onDelete={() => setDeletePatientId(patient.id)}
             />
@@ -142,6 +144,12 @@ export default function Patients() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PatientDetailDialog
+        patient={selectedPatient}
+        open={!!selectedPatient}
+        onOpenChange={(open) => !open && setSelectedPatient(null)}
+      />
     </div>
   );
 }
