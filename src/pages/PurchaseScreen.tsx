@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import {
   LogOut,
   Clock,
   Shield,
+  Building2,
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 import { useToast } from '@/hooks/use-toast';
@@ -23,11 +24,17 @@ import {
   query,
   setDoc,
   updateDoc,
+  where,
 } from 'firebase/firestore';
 
-export default function PurchaseScreen() {
+interface PurchaseScreenProps {
+  mode?: 'purchase' | 'setup';
+}
+
+export default function PurchaseScreen({ mode = 'purchase' }: PurchaseScreenProps) {
   const [isReloading, setIsReloading] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(false);
+  const [isCreatingClinic, setIsCreatingClinic] = useState(false);
   const { user, signOut, reloadUserStatus } = useAuth();
   const { toast } = useToast();
 
@@ -39,15 +46,68 @@ export default function PurchaseScreen() {
     setIsReloading(false);
   };
 
-  // Bootstrap para o cenário “primeira instalação”: se NÃO existir nenhum admin ainda,
+  // Criar apenas a clínica (tenant) para usuários ativos sem tenantId
+  const handleCreateClinic = async () => {
+    if (!user?.uid) return;
+
+    setIsCreatingClinic(true);
+    try {
+      // Criar tenant e membro owner
+      const tenantRef = doc(collection(db, 'tenants'));
+      const tenantId = tenantRef.id;
+
+      await setDoc(tenantRef, {
+        name: `Clínica de ${user.displayName || 'Usuário'}`,
+        ownerId: user.uid,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        settings: {},
+      });
+
+      await addDoc(collection(db, 'tenants', tenantId, 'members'), {
+        tenantId,
+        userId: user.uid,
+        role: 'owner',
+        email: user.email || '',
+        displayName: user.displayName || '',
+        joinedAt: new Date().toISOString(),
+      });
+
+      // Associar tenantId ao usuário
+      await updateDoc(doc(db, 'users', user.uid), {
+        tenantId,
+      });
+
+      toast({
+        title: 'Clínica criada',
+        description: 'Sua clínica foi configurada com sucesso!',
+      });
+
+      // Atualizar estado
+      await reloadUserStatus();
+    } catch (err) {
+      console.error('Create clinic failed:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao criar clínica',
+        description: 'Não foi possível criar sua clínica. Tente novamente.',
+      });
+    } finally {
+      setIsCreatingClinic(false);
+    }
+  };
+
+  // Bootstrap para o cenário "primeira instalação": se NÃO existir nenhum admin ainda,
   // o primeiro usuário pode se promover a admin e ativar a própria clínica.
   const handleBootstrapFirstAdmin = async () => {
     if (!user?.uid) return;
 
     setIsBootstrapping(true);
     try {
-      // 1) Verificar se já existe algum admin (qualquer doc em user_roles)
-      const rolesSnap = await getDocs(query(collection(db, 'user_roles'), limit(1)));
+      // 1) Verificar se já existe um ADMIN (não qualquer role)
+      const rolesSnap = await getDocs(
+        query(collection(db, 'user_roles'), where('role', '==', 'admin'), limit(1))
+      );
       if (!rolesSnap.empty) {
         toast({
           variant: 'destructive',
@@ -120,6 +180,80 @@ export default function PurchaseScreen() {
   );
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
+  // Mode: setup - User is active but missing tenantId
+  if (mode === 'setup') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-lg animate-slide-up">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <img src={logo} alt="ClinicFlow" className="w-20 h-20 mx-auto mb-4" />
+            <h1 className="text-3xl font-display font-bold text-foreground">ClinicFlow</h1>
+          </div>
+
+          <Card className="border-border/50 shadow-lg">
+            <CardHeader className="text-center pb-2">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mx-auto mb-4">
+                <Building2 className="w-6 h-6 text-primary" />
+              </div>
+              <CardTitle className="text-2xl font-display">Configuração Incompleta</CardTitle>
+              <CardDescription className="text-base">
+                Olá, <strong>{user?.displayName}</strong>! Sua conta está ativa, mas sua clínica ainda não foi configurada.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  <strong>Ação necessária:</strong> Clique no botão abaixo para criar sua clínica e começar a usar o sistema.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <Button
+                  className="w-full h-12 text-base"
+                  onClick={handleCreateClinic}
+                  disabled={isCreatingClinic}
+                >
+                  {isCreatingClinic ? (
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  ) : (
+                    <Building2 className="mr-2 h-5 w-5" />
+                  )}
+                  Criar minha clínica agora
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleReload}
+                  disabled={isReloading}
+                >
+                  {isReloading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  Verificar novamente
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  className="w-full text-muted-foreground"
+                  onClick={signOut}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Mode: purchase - User needs to purchase/activate
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-lg animate-slide-up">
@@ -292,4 +426,3 @@ export default function PurchaseScreen() {
     </div>
   );
 }
-

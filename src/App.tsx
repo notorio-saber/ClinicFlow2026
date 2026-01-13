@@ -41,6 +41,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <PurchaseScreen />;
   }
 
+  // User is active but has no clinic (tenantId missing)
+  if (!user.tenantId) {
+    return <PurchaseScreen mode="setup" />;
+  }
+
   return <TenantProvider>{children}</TenantProvider>;
 }
 
