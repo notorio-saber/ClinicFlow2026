@@ -85,12 +85,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setFirebaseUser(fbUser);
       
       if (fbUser) {
+        // Limpar listener anterior se existir (evita duplicação)
+        if (unsubUser) {
+          unsubUser();
+          unsubUser = null;
+        }
+        
         // Usar onSnapshot para sincronização em tempo real
         unsubUser = onSnapshot(
           doc(db, 'users', fbUser.uid),
           (docSnapshot) => {
             if (docSnapshot.exists()) {
-              setUser(docSnapshot.data() as User);
+              const data = docSnapshot.data();
+              // Garantir uid sempre presente (vem do Auth, não do doc)
+              setUser({ ...data, uid: fbUser.uid } as User);
+              console.log('[AuthContext] User synced:', { uid: fbUser.uid, tenantId: data.tenantId });
             } else {
               setUser(null);
             }
