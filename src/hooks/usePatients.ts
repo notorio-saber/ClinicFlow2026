@@ -57,8 +57,14 @@ export function usePatients() {
 
   const addPatient = useCallback(
     async (data: PatientFormData) => {
-      if (!tenantId || !user?.uid) {
-        throw new Error('Sem permissão para adicionar pacientes');
+      console.log('[usePatients] addPatient check:', { tenantId, userUid: user?.uid });
+      
+      if (!tenantId) {
+        throw new Error('Sua clínica ainda não está ativa. Aguarde a ativação pelo administrador.');
+      }
+      
+      if (!user?.uid) {
+        throw new Error('Sessão expirada. Faça login novamente.');
       }
 
       const patientData: Omit<Patient, 'id'> = {
@@ -83,7 +89,7 @@ export function usePatients() {
   const updatePatient = useCallback(
     async (patientId: string, data: Partial<PatientFormData>) => {
       if (!tenantId) {
-        throw new Error('Sem permissão para editar pacientes');
+        throw new Error('Sua clínica ainda não está ativa. Aguarde a ativação pelo administrador.');
       }
 
       await updateDoc(doc(db, 'patients', patientId), {
@@ -97,7 +103,7 @@ export function usePatients() {
   const deletePatient = useCallback(
     async (patientId: string) => {
       if (!tenantId) {
-        throw new Error('Sem permissão para excluir pacientes');
+        throw new Error('Sua clínica ainda não está ativa. Aguarde a ativação pelo administrador.');
       }
 
       await deleteDoc(doc(db, 'patients', patientId));
