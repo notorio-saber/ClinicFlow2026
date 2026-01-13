@@ -15,12 +15,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { Patient, PatientFormData } from '@/types';
 
 export function usePatients() {
-  const { user } = useAuth();
+  const { user, firebaseUser } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const tenantId = user?.tenantId;
+  const authUid = firebaseUser?.uid;
 
   useEffect(() => {
     if (!tenantId) {
@@ -57,13 +58,13 @@ export function usePatients() {
 
   const addPatient = useCallback(
     async (data: PatientFormData) => {
-      console.log('[usePatients] addPatient check:', { tenantId, userUid: user?.uid });
+      console.log('[usePatients] addPatient check:', { tenantId, authUid });
       
       if (!tenantId) {
-        throw new Error('Sua clínica ainda não está ativa. Aguarde a ativação pelo administrador.');
+        throw new Error('Sua clínica ainda não foi configurada. Finalize o processo de ativação.');
       }
       
-      if (!user?.uid) {
+      if (!authUid) {
         throw new Error('Sessão expirada. Faça login novamente.');
       }
 
@@ -77,13 +78,13 @@ export function usePatients() {
         notes: data.notes,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        createdBy: user.uid,
+        createdBy: authUid,
       };
 
       const docRef = await addDoc(collection(db, 'patients'), patientData);
       return docRef.id;
     },
-    [tenantId, user?.uid]
+    [tenantId, authUid]
   );
 
   const updatePatient = useCallback(
