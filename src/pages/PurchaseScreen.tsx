@@ -1,26 +1,117 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Loader2, 
-  CheckCircle, 
-  MessageCircle, 
-  RefreshCw, 
-  LogOut, 
+import {
+  Loader2,
+  CheckCircle,
+  MessageCircle,
+  RefreshCw,
+  LogOut,
   Clock,
-  Shield
+  Shield,
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
+import { useToast } from '@/hooks/use-toast';
+import { db } from '@/lib/firebase';
+import {
+  addDoc,
+  collection,
+  doc,
+  getDocs,
+  limit,
+  query,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
 
 export default function PurchaseScreen() {
   const [isReloading, setIsReloading] = useState(false);
+  const [isBootstrapping, setIsBootstrapping] = useState(false);
   const { user, signOut, reloadUserStatus } = useAuth();
+  const { toast } = useToast();
+
+  const canBootstrap = useMemo(() => Boolean(user?.uid), [user?.uid]);
 
   const handleReload = async () => {
     setIsReloading(true);
     await reloadUserStatus();
     setIsReloading(false);
+  };
+
+  // Bootstrap para o cenário “primeira instalação”: se NÃO existir nenhum admin ainda,
+  // o primeiro usuário pode se promover a admin e ativar a própria clínica.
+  const handleBootstrapFirstAdmin = async () => {
+    if (!user?.uid) return;
+
+    setIsBootstrapping(true);
+    try {
+      // 1) Verificar se já existe algum admin (qualquer doc em user_roles)
+      const rolesSnap = await getDocs(query(collection(db, 'user_roles'), limit(1)));
+      if (!rolesSnap.empty) {
+        toast({
+          variant: 'destructive',
+          title: 'Já existe um admin configurado',
+          description: 'A ativação deve ser feita pelo administrador do sistema.',
+        });
+        return;
+      }
+
+      // 2) Promover este usuário a admin
+      await setDoc(
+        doc(db, 'user_roles', user.uid),
+        {
+          role: 'admin',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+
+      // 3) Criar tenant e membro owner (mesma lógica do painel admin)
+      const tenantRef = doc(collection(db, 'tenants'));
+      const tenantId = tenantRef.id;
+
+      await setDoc(tenantRef, {
+        name: `Clínica de ${user.displayName || 'Usuário'}`,
+        ownerId: user.uid,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        settings: {},
+      });
+
+      await addDoc(collection(db, 'tenants', tenantId, 'members'), {
+        tenantId,
+        userId: user.uid,
+        role: 'owner',
+        email: user.email || '',
+        displayName: user.displayName || '',
+        joinedAt: new Date().toISOString(),
+      });
+
+      // 4) Ativar usuário e associar tenantId
+      await updateDoc(doc(db, 'users', user.uid), {
+        isActive: true,
+        tenantId,
+      });
+
+      toast({
+        title: 'Sistema inicializado',
+        description: 'Você foi definido como admin e sua clínica foi ativada.',
+      });
+
+      // Garantir que a tela atualize imediatamente
+      await reloadUserStatus();
+    } catch (err) {
+      console.error('Bootstrap admin failed:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao inicializar',
+        description: 'Não foi possível ativar sua clínica. Tente novamente.',
+      });
+    } finally {
+      setIsBootstrapping(false);
+    }
   };
 
   const whatsappNumber = '5511999999999'; // Replace with your WhatsApp number
@@ -48,14 +139,14 @@ export default function PurchaseScreen() {
               Bem-vindo(a), <strong>{user?.displayName}</strong>!
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
             {/* Steps */}
             <div className="space-y-4">
               <h3 className="font-semibold text-center text-muted-foreground">
                 Próximos passos para liberar seu acesso:
               </h3>
-              
+
               <div className="space-y-3">
                 {/* Step 1 */}
                 <div className="flex items-start gap-4 p-4 rounded-lg bg-success/5 border border-success/20">
@@ -64,9 +155,7 @@ export default function PurchaseScreen() {
                   </div>
                   <div>
                     <p className="font-medium text-success">1. Conta criada</p>
-                    <p className="text-sm text-muted-foreground">
-                      Sua conta foi criada com sucesso!
-                    </p>
+                    <p className="text-sm text-muted-foreground">Sua conta foi criada com sucesso!</p>
                   </div>
                 </div>
 
@@ -151,6 +240,37 @@ export default function PurchaseScreen() {
                 Já comprei - Verificar acesso
               </Button>
 
+              {/* Primeira instalação */}
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Shield className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">Primeira instalação?</p>
+                    <p className="text-xs text-muted-foreground">
+                      Se esta for a primeira conta do sistema (nenhum admin existe ainda), você pode
+                      inicializar como admin e ativar sua clínica.
+                    </p>
+                    <div className="mt-3">
+                      <Button
+                        variant="secondary"
+                        className="w-full"
+                        onClick={handleBootstrapFirstAdmin}
+                        disabled={!canBootstrap || isBootstrapping}
+                      >
+                        {isBootstrapping ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Shield className="mr-2 h-4 w-4" />
+                        )}
+                        Inicializar como admin e ativar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <Button
                 variant="ghost"
                 className="w-full text-muted-foreground"
@@ -172,3 +292,4 @@ export default function PurchaseScreen() {
     </div>
   );
 }
+
