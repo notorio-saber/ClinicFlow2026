@@ -9,7 +9,7 @@ import {
   signInWithPopup,
   sendPasswordResetEmail,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { User, UserProfile, UserRole } from '@/types';
 
@@ -79,21 +79,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+    let unsubUser: (() => void) | null = null;
+    
+    const unsubAuth = onAuthStateChanged(auth, (fbUser) => {
       setFirebaseUser(fbUser);
       
       if (fbUser) {
-        const userData = await fetchUserData(fbUser);
-        setUser(userData);
+        // Usar onSnapshot para sincronização em tempo real
+        unsubUser = onSnapshot(
+          doc(db, 'users', fbUser.uid),
+          (docSnapshot) => {
+            if (docSnapshot.exists()) {
+              setUser(docSnapshot.data() as User);
+            } else {
+              setUser(null);
+            }
+            setLoading(false);
+          },
+          (err) => {
+            console.error('Error fetching user data:', err);
+            setUser(null);
+            setLoading(false);
+          }
+        );
       } else {
+        // Limpar listener do usuário se existir
+        if (unsubUser) {
+          unsubUser();
+          unsubUser = null;
+        }
         setUser(null);
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [fetchUserData]);
+    return () => {
+      unsubAuth();
+      if (unsubUser) {
+        unsubUser();
+      }
+    };
+  }, []);
 
   const signUp = async (email: string, password: string, displayName: string) => {
     try {
