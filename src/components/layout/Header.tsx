@@ -3,7 +3,6 @@ import logo from "@/assets/logo.png";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useTenant } from "@/contexts/TenantContext";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -14,7 +13,6 @@ import {
 
 export function Header() {
   const { theme, setTheme } = useTheme();
-  const { tenant } = useTenant();
   const { user, signOut } = useAuth();
 
   const toggleTheme = () => {
@@ -65,7 +63,7 @@ export function Header() {
                 </AvatarFallback>
               </Avatar>
               <span className="text-sm text-muted-foreground hidden sm:inline max-w-[100px] truncate">
-                {tenant?.name || "Minha Clínica"}
+                {user?.displayName || "Minha Conta"}
               </span>
             </Button>
           </DropdownMenuTrigger>

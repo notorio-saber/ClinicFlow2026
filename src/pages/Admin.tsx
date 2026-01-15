@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, getDocs, doc, updateDoc, setDoc, addDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { Shield, UserCheck, UserX, Loader2 } from "lucide-react";
@@ -15,7 +15,6 @@ interface UserData {
   email: string;
   displayName: string;
   isActive: boolean;
-  tenantId?: string;
   createdAt: Date;
 }
 
@@ -41,7 +40,6 @@ export default function Admin() {
         email: doc.data().email || "",
         displayName: doc.data().displayName || "Sem nome",
         isActive: doc.data().isActive || false,
-        tenantId: doc.data().tenantId,
         createdAt: doc.data().createdAt?.toDate() || new Date(),
       }));
       setUsers(usersData);
@@ -57,63 +55,20 @@ export default function Admin() {
     }
   };
 
-  const toggleUserActive = async (userId: string, currentStatus: boolean, currentTenantId?: string) => {
+  const toggleUserActive = async (userId: string, currentStatus: boolean) => {
     setUpdatingId(userId);
     try {
       const userRef = doc(db, "users", userId);
-      const user = users.find(u => u.id === userId);
       
-      if (!currentStatus) {
-        // Ativando usuário - criar tenant se não existir
-        let tenantId = currentTenantId;
-        
-        if (!tenantId) {
-          // Criar novo tenant para o usuário
-          const tenantRef = doc(collection(db, "tenants"));
-          tenantId = tenantRef.id;
-          
-          await setDoc(tenantRef, {
-            name: `Clínica de ${user?.displayName || 'Usuário'}`,
-            ownerId: userId,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            settings: {},
-          });
-          
-          // Adicionar usuário como membro owner do tenant
-          await addDoc(collection(db, "tenants", tenantId, "members"), {
-            tenantId: tenantId,
-            userId: userId,
-            role: "owner",
-            email: user?.email || "",
-            displayName: user?.displayName || "",
-            joinedAt: new Date().toISOString(),
-          });
-        }
-        
-        // Atualizar usuário com isActive e tenantId
-        await updateDoc(userRef, {
-          isActive: true,
-          tenantId: tenantId,
-        });
-        
-        setUsers((prev) =>
-          prev.map((u) =>
-            u.id === userId ? { ...u, isActive: true, tenantId } : u
-          )
-        );
-      } else {
-        // Desativando usuário
-        await updateDoc(userRef, {
-          isActive: false,
-        });
-        
-        setUsers((prev) =>
-          prev.map((u) =>
-            u.id === userId ? { ...u, isActive: false } : u
-          )
-        );
-      }
+      await updateDoc(userRef, {
+        isActive: !currentStatus,
+      });
+      
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === userId ? { ...u, isActive: !currentStatus } : u
+        )
+      );
 
       toast({
         title: !currentStatus ? "Usuário ativado" : "Usuário desativado",
@@ -164,7 +119,7 @@ export default function Admin() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Administração</h1>
           <p className="text-muted-foreground text-sm">
-            Gerencie usuários e licenças
+            Gerencie usuários do sistema
           </p>
         </div>
       </div>
@@ -230,7 +185,7 @@ export default function Admin() {
                     checked={user.isActive}
                     disabled={updatingId === user.id}
                     onCheckedChange={() =>
-                      toggleUserActive(user.id, user.isActive, user.tenantId)
+                      toggleUserActive(user.id, user.isActive)
                     }
                   />
                 </div>

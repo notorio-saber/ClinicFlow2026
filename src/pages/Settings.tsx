@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Building2, Users, Bell, Palette, ChevronRight } from "lucide-react";
+import { User, Palette, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useTenant } from "@/contexts/TenantContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
-import { ClinicSettingsDialog } from "@/components/settings/ClinicSettingsDialog";
-import { TeamManagementDialog } from "@/components/settings/TeamManagementDialog";
+import { ProfileSettingsDialog } from "@/components/settings/ProfileSettingsDialog";
 import { AppearanceDialog } from "@/components/settings/AppearanceDialog";
 
 interface SettingsItemProps {
@@ -28,27 +27,29 @@ function SettingsItem({ icon, title, description, onClick }: SettingsItemProps) 
 }
 
 export default function Settings() {
-  const { tenant } = useTenant();
-  const [clinicOpen, setClinicOpen] = useState(false);
-  const [teamOpen, setTeamOpen] = useState(false);
+  const { user } = useAuth();
+  const [profileOpen, setProfileOpen] = useState(false);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
-        <p className="text-muted-foreground text-sm mt-1">Personalize sua clínica e preferências</p>
+        <p className="text-muted-foreground text-sm mt-1">Personalize seu perfil e preferências</p>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Minha Clínica</CardTitle>
-          <CardDescription>{tenant?.name || "Configure os dados da sua clínica"}</CardDescription>
+          <CardTitle className="text-base">Minha Conta</CardTitle>
+          <CardDescription>{user?.displayName || "Configure seu perfil"}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-1">
-          <SettingsItem icon={<Building2 className="h-5 w-5" />} title="Dados da Clínica" description="Nome, endereço, telefone e logo" onClick={() => setClinicOpen(true)} />
-          <Separator />
-          <SettingsItem icon={<Users className="h-5 w-5" />} title="Equipe" description="Gerencie membros e permissões" onClick={() => setTeamOpen(true)} />
+          <SettingsItem 
+            icon={<User className="h-5 w-5" />} 
+            title="Perfil" 
+            description="Nome e informações pessoais" 
+            onClick={() => setProfileOpen(true)} 
+          />
         </CardContent>
       </Card>
 
@@ -58,7 +59,12 @@ export default function Settings() {
           <CardDescription>Personalize a experiência do app</CardDescription>
         </CardHeader>
         <CardContent className="space-y-1">
-          <SettingsItem icon={<Palette className="h-5 w-5" />} title="Aparência" description="Tema claro ou escuro" onClick={() => setAppearanceOpen(true)} />
+          <SettingsItem 
+            icon={<Palette className="h-5 w-5" />} 
+            title="Aparência" 
+            description="Tema claro ou escuro" 
+            onClick={() => setAppearanceOpen(true)} 
+          />
         </CardContent>
       </Card>
 
@@ -66,8 +72,7 @@ export default function Settings() {
         <p className="text-xs text-muted-foreground">ClinicFlow v1.0.0</p>
       </div>
 
-      <ClinicSettingsDialog open={clinicOpen} onOpenChange={setClinicOpen} />
-      <TeamManagementDialog open={teamOpen} onOpenChange={setTeamOpen} />
+      <ProfileSettingsDialog open={profileOpen} onOpenChange={setProfileOpen} />
       <AppearanceDialog open={appearanceOpen} onOpenChange={setAppearanceOpen} />
     </div>
   );
