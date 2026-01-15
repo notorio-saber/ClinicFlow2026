@@ -11,19 +11,19 @@ import {
   getDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import type { MedicalRecord, MedicalRecordFormData, RecordRevision } from '@/types';
 
 export function useMedicalRecords(patientId: string | undefined) {
-  const { tenant, canEdit } = useTenant();
-  const { user } = useAuth();
+  const { user, firebaseUser } = useAuth();
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const userId = firebaseUser?.uid;
+
   useEffect(() => {
-    if (!tenant?.id || !patientId) {
+    if (!userId || !patientId) {
       setRecords([]);
       setLoading(false);
       return;
@@ -31,7 +31,7 @@ export function useMedicalRecords(patientId: string | undefined) {
 
     const q = query(
       collection(db, 'medicalRecords'),
-      where('tenantId', '==', tenant.id),
+      where('userId', '==', userId),
       where('patientId', '==', patientId),
       orderBy('createdAt', 'desc')
     );
@@ -54,16 +54,16 @@ export function useMedicalRecords(patientId: string | undefined) {
     );
 
     return () => unsubscribe();
-  }, [tenant?.id, patientId]);
+  }, [userId, patientId]);
 
   const addRecord = useCallback(
     async (data: MedicalRecordFormData) => {
-      if (!tenant?.id || !user?.uid || !patientId || !canEdit) {
-        throw new Error('Sem permissão para adicionar prontuários');
+      if (!userId || !patientId) {
+        throw new Error('Sessão expirada. Faça login novamente.');
       }
 
       const recordData: Omit<MedicalRecord, 'id'> = {
-        tenantId: tenant.id,
+        userId,
         patientId,
         procedureType: data.procedureType,
         chiefComplaint: data.chiefComplaint,
@@ -76,23 +76,22 @@ export function useMedicalRecords(patientId: string | undefined) {
         attachments: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        createdBy: user.uid,
+        createdBy: userId,
         revisionHistory: [],
       };
 
       const docRef = await addDoc(collection(db, 'medicalRecords'), recordData);
       return docRef.id;
     },
-    [tenant?.id, user?.uid, patientId, canEdit]
+    [userId, patientId]
   );
 
   const updateRecord = useCallback(
     async (recordId: string, data: Partial<MedicalRecordFormData>, changeDescription: string) => {
-      if (!canEdit || !user) {
-        throw new Error('Sem permissão para editar prontuários');
+      if (!userId || !user) {
+        throw new Error('Sessão expirada. Faça login novamente.');
       }
 
-      // Get current record to add to revision history
       const recordRef = doc(db, 'medicalRecords', recordId);
       const recordSnap = await getDoc(recordRef);
       
@@ -104,7 +103,7 @@ export function useMedicalRecords(patientId: string | undefined) {
       const revision: RecordRevision = {
         id: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
-        userId: user.uid,
+        userId: userId,
         userName: user.displayName || 'Usuário',
         changes: changeDescription,
       };
@@ -114,11 +113,11 @@ export function useMedicalRecords(patientId: string | undefined) {
       await updateDoc(recordRef, {
         ...data,
         updatedAt: new Date().toISOString(),
-        updatedBy: user.uid,
+        updatedBy: userId,
         revisionHistory,
       });
     },
-    [canEdit, user]
+    [userId, user]
   );
 
   return {

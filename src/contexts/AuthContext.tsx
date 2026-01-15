@@ -11,7 +11,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import type { User, UserProfile, UserRole } from '@/types';
+import type { User, UserProfile } from '@/types';
 
 interface AuthContextType {
   user: User | null;
@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       emailLower: email.toLowerCase(),
       displayName: displayName,
       photoURL: fbUser.photoURL || undefined,
-      isActive: false, // Always false for new users
+      isActive: true, // Users are active by default now
       createdAt: new Date().toISOString(),
     };
 
@@ -85,21 +85,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setFirebaseUser(fbUser);
       
       if (fbUser) {
-        // Limpar listener anterior se existir (evita duplicação)
         if (unsubUser) {
           unsubUser();
           unsubUser = null;
         }
         
-        // Usar onSnapshot para sincronização em tempo real
         unsubUser = onSnapshot(
           doc(db, 'users', fbUser.uid),
           (docSnapshot) => {
             if (docSnapshot.exists()) {
               const data = docSnapshot.data();
-              // Garantir uid sempre presente (vem do Auth, não do doc)
               setUser({ ...data, uid: fbUser.uid } as User);
-              console.log('[AuthContext] User synced:', { uid: fbUser.uid, tenantId: data.tenantId });
             } else {
               setUser(null);
             }
@@ -112,7 +108,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         );
       } else {
-        // Limpar listener do usuário se existir
         if (unsubUser) {
           unsubUser();
           unsubUser = null;
@@ -156,7 +151,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userData = await fetchUserData(fbUser);
       
       if (!userData) {
-        // User exists in Auth but not in Firestore - create documents
         const newUserData = await createUserDocuments(fbUser, email.split('@')[0], email);
         setUser(newUserData);
       } else {
@@ -182,7 +176,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let userData = await fetchUserData(fbUser);
       
       if (!userData) {
-        // New Google user - create documents
         userData = await createUserDocuments(
           fbUser,
           fbUser.displayName || fbUser.email?.split('@')[0] || 'Usuário',

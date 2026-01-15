@@ -5,12 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { TenantProvider } from "@/contexts/TenantContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
-import PurchaseScreen from "./pages/PurchaseScreen";
 import Dashboard from "./pages/Dashboard";
 import Patients from "./pages/Patients";
 import PatientDetail from "./pages/PatientDetail";
@@ -36,17 +34,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
-  // Check if user is active
-  if (user.isActive !== true) {
-    return <PurchaseScreen />;
-  }
-
-  // User is active but has no clinic (tenantId missing)
-  if (!user.tenantId) {
-    return <PurchaseScreen mode="setup" />;
-  }
-
-  return <TenantProvider>{children}</TenantProvider>;
+  return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -60,7 +48,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (user && user.isActive === true) {
+  if (user) {
     return <Navigate to="/" replace />;
   }
 

@@ -7,7 +7,6 @@ export interface User {
   photoURL?: string;
   isActive: boolean;
   createdAt: string;
-  tenantId?: string;
 }
 
 export interface UserProfile {
@@ -26,40 +25,10 @@ export interface UserRoleDoc {
   role: UserRole;
 }
 
-// Tenant Types
-export type TenantMemberRole = 'owner' | 'staff' | 'readonly';
-
-export interface Tenant {
-  id: string;
-  name: string;
-  ownerId: string;
-  createdAt: string;
-  updatedAt: string;
-  settings?: TenantSettings;
-}
-
-export interface TenantSettings {
-  logoUrl?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-}
-
-export interface TenantMember {
-  id: string;
-  tenantId: string;
-  userId: string;
-  role: TenantMemberRole;
-  email: string;
-  displayName: string;
-  joinedAt: string;
-  invitedBy?: string;
-}
-
 // Patient Types
 export interface Patient {
   id: string;
-  tenantId: string;
+  userId: string;
   name: string;
   email?: string;
   phone: string;
@@ -75,7 +44,7 @@ export interface Patient {
 // Medical Record Types
 export interface MedicalRecord {
   id: string;
-  tenantId: string;
+  userId: string;
   patientId: string;
   procedureType: string;
   chiefComplaint: string;

@@ -15,24 +15,25 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { Patient, PatientFormData } from '@/types';
 
 export function usePatients() {
-  const { user, firebaseUser } = useAuth();
+  const { firebaseUser } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const tenantId = user?.tenantId;
-  const authUid = firebaseUser?.uid;
+  const userId = firebaseUser?.uid;
 
   useEffect(() => {
-    if (!tenantId) {
+    if (!userId) {
       setPatients([]);
       setLoading(false);
       return;
     }
 
+    console.log('[usePatients] Starting query with userId:', userId);
+
     const q = query(
       collection(db, 'patients'),
-      where('tenantId', '==', tenantId),
+      where('userId', '==', userId),
       orderBy('createdAt', 'desc')
     );
 
@@ -43,33 +44,28 @@ export function usePatients() {
           id: doc.id,
           ...doc.data(),
         })) as Patient[];
+        console.log('[usePatients] Received patients:', patientsData.length);
         setPatients(patientsData);
         setLoading(false);
       },
       (err) => {
-        console.error('Error fetching patients:', err);
-        setError('Erro ao carregar pacientes');
+        console.error('[usePatients] Error fetching patients:', err.message);
+        setError('Erro ao carregar pacientes: ' + err.message);
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [tenantId]);
+  }, [userId]);
 
   const addPatient = useCallback(
     async (data: PatientFormData) => {
-      console.log('[usePatients] addPatient check:', { tenantId, authUid });
-      
-      if (!tenantId) {
-        throw new Error('Sua clínica ainda não foi configurada. Finalize o processo de ativação.');
-      }
-      
-      if (!authUid) {
+      if (!userId) {
         throw new Error('Sessão expirada. Faça login novamente.');
       }
 
       const patientData: Omit<Patient, 'id'> = {
-        tenantId: tenantId,
+        userId: userId,
         name: data.name,
         email: data.email,
         phone: data.phone,
@@ -78,19 +74,19 @@ export function usePatients() {
         notes: data.notes,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        createdBy: authUid,
+        createdBy: userId,
       };
 
       const docRef = await addDoc(collection(db, 'patients'), patientData);
       return docRef.id;
     },
-    [tenantId, authUid]
+    [userId]
   );
 
   const updatePatient = useCallback(
     async (patientId: string, data: Partial<PatientFormData>) => {
-      if (!tenantId) {
-        throw new Error('Sua clínica ainda não está ativa. Aguarde a ativação pelo administrador.');
+      if (!userId) {
+        throw new Error('Sessão expirada. Faça login novamente.');
       }
 
       await updateDoc(doc(db, 'patients', patientId), {
@@ -98,18 +94,18 @@ export function usePatients() {
         updatedAt: new Date().toISOString(),
       });
     },
-    [tenantId]
+    [userId]
   );
 
   const deletePatient = useCallback(
     async (patientId: string) => {
-      if (!tenantId) {
-        throw new Error('Sua clínica ainda não está ativa. Aguarde a ativação pelo administrador.');
+      if (!userId) {
+        throw new Error('Sessão expirada. Faça login novamente.');
       }
 
       await deleteDoc(doc(db, 'patients', patientId));
     },
-    [tenantId]
+    [userId]
   );
 
   const searchPatients = useCallback(
